@@ -4,7 +4,22 @@ You can exclude built-in entropy components and add custom entropy components,
 for example, when a component is too unstable for your needs.
 Use the built-in hash function to hash your custom list of components.
 
-An example of component exclusion:
+## Excluding built-in components at collection time
+
+Pass the `excludeSources` option to `load()` to skip collecting the given built-in entropy sources.
+Excluded sources are never loaded, so the collection takes less time and CPU — this matters on low-end devices
+and for the expensive sources such as `fonts`.
+
+```js
+// The `fonts` and `audio` components will not be collected at all
+const fpPromise = FingerprintJS.load({ excludeSources: ['fonts', 'audio'] })
+```
+
+The visitor identifier and the returned `components` are computed from the remaining components only,
+so excluding a source changes the visitor identifiers. The confidence score keeps working as usual,
+even when the `platform` source (which the score reads) is excluded.
+
+An example of component exclusion after collection:
 
 ```js
 // ...

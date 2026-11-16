@@ -120,7 +120,7 @@ fpPromise
 
 ## API
 
-#### `FingerprintJS.load({ delayFallback?: number, debug?: boolean, monitoring?: boolean }): Promise<Agent>`
+#### `FingerprintJS.load({ delayFallback?: number, debug?: boolean, monitoring?: boolean, excludeSources?: string[] }): Promise<Agent>`
 
 Builds an instance of Agent and waits a delay required for a proper operation.
 We recommend calling it as soon as possible.
@@ -128,6 +128,15 @@ We recommend calling it as soon as possible.
 it has a good default value which we don't recommend to change.
 `debug: true` prints debug messages to the console.
 `monitoring: false` disables the AJAX request that the library sends to a FingerprintJS server to collect usage statistics (it's always disabled in the CDN version).
+`excludeSources` is an optional list of built-in entropy source names to skip collecting.
+Excluded sources are never loaded, which speeds up the collection; this is useful on low-end devices or for the sources that are known to be expensive (e.g. `fonts`).
+The visitor identifier and the returned `components` are computed from the remaining components only.
+Unknown names are ignored.
+Changing the list changes the visitor identifiers the agent produces, so keep it stable across visits if you compare identifiers over time.
+
+```js
+const fpPromise = FingerprintJS.load({ excludeSources: ['fonts'] })
+```
 
 #### `agent.get(): Promise<GetResult>`
 

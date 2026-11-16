@@ -1,6 +1,6 @@
 import { load, Agent, LoadOptions, GetOptions, GetResult, hashComponents, componentsToDebugString } from './agent'
 import { Confidence } from './confidence'
-import { BuiltinComponents } from './sources'
+import { BuiltinComponents, BuiltinSourceName } from './sources'
 import { Component, UnknownComponents } from './utils/entropy_source'
 import { x64hash128 } from './utils/hashing'
 
@@ -18,6 +18,8 @@ export {
   BuiltinComponents,
   Confidence,
 }
+// The following type is out of Semantic Versioning, like `BuiltinComponents`
+export { BuiltinSourceName }
 // The default export is a syntax sugar (`import * as FP from '...' → import FP from '...'`).
 // It should contain all the public exported values.
 export default { load, hashComponents, componentsToDebugString }

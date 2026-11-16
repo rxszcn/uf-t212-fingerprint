@@ -26,4 +26,24 @@ describe('Confidence', () => {
       expect(confidence).toEqual({ score: 0.7, comment: commentTemplate.replace(/\$/g, '0.997') })
     }
   })
+
+  it('does not throw when the platform component is excluded', () => {
+    const getComponents = loadSources({ platform: getPlatform }, undefined, ['platform'])
+    return getComponents().then((components) => {
+      expect('platform' in components).toBeFalse()
+
+      const confidence = getConfidence(components)
+      expect(typeof confidence.score).toBe('number')
+      expect(confidence.score).toBeGreaterThan(0)
+      expect(confidence.score).toBeLessThanOrEqual(1)
+      expect(confidence.comment).toMatch(/^\d\.\d+ if upgrade to Pro: https:\/\/fingerprint\.com\/github\//)
+    })
+  })
+
+  it('does not throw when the platform component has failed to load', () => {
+    const confidence = getConfidence({ platform: { error: new Error('Failed to get'), duration: 0 } })
+    expect(typeof confidence.score).toBe('number')
+    expect(confidence.score).toBeGreaterThan(0)
+    expect(confidence.score).toBeLessThanOrEqual(1)
+  })
 })

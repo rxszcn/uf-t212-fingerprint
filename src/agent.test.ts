@@ -1,6 +1,6 @@
 import { version } from '../package.json'
 
-import { load as loadAgent } from './agent'
+import { hashComponents, load as loadAgent } from './agent'
 import { sources } from './sources'
 import { isSourceLoaded } from './sources/cpu_class'
 import { wait } from './utils/async'
@@ -24,6 +24,63 @@ describe('Agent', () => {
         .withContext(`Unexpected error in the "${componentName}" component`)
         .toBeUndefined()
     }
+  })
+
+  describe('excludeSources option', () => {
+    it('collects all components when the option is not passed or empty', async () => {
+      const allComponentNames = Object.keys(sources).sort()
+
+      const defaultAgent = await loadAgent({ delayFallback: 0 })
+      expect(Object.keys((await defaultAgent.get()).components).sort()).toEqual(allComponentNames)
+
+      const emptyListAgent = await loadAgent({ delayFallback: 0, excludeSources: [] })
+      expect(Object.keys((await emptyListAgent.get()).components).sort()).toEqual(allComponentNames)
+    })
+
+    it('omits the excluded components and skips collecting them', async () => {
+      // The spies prove that the excluded sources are not even loaded, not just filtered out of the result
+      const fontsSourceSpy = spyOn(sources, 'fonts')
+      const audioSourceSpy = spyOn(sources, 'audio')
+
+      const excludedSources = ['fonts', 'audio'] as const
+      const agent = await loadAgent({ delayFallback: 0, excludeSources: excludedSources })
+      const result = await agent.get()
+
+      expect(fontsSourceSpy).not.toHaveBeenCalled()
+      expect(audioSourceSpy).not.toHaveBeenCalled()
+
+      const expectedComponentNames = Object.keys(sources)
+        .filter((componentName) => !(excludedSources as readonly string[]).includes(componentName))
+        .sort()
+      expect(Object.keys(result.components).sort()).toEqual(expectedComponentNames)
+      expect(result.confidence.score).toBeGreaterThan(0)
+    })
+
+    it('makes the visitorId from the remaining components', async () => {
+      const fullAgent = await loadAgent({ delayFallback: 0 })
+      const fullResult = await fullAgent.get()
+
+      const agent = await loadAgent({ delayFallback: 0, excludeSources: ['fonts'] })
+      const result = await agent.get()
+
+      // The hash must be consistent with the components the agent has returned
+      expect(result.visitorId).toEqual(hashComponents(result.components))
+      // And since the component set has changed, the identifier must change too
+      expect(result.visitorId).not.toEqual(fullResult.visitorId)
+    })
+
+    it('does not crash the confidence calculation when the platform source is excluded', async () => {
+      const agent = await loadAgent({ delayFallback: 0, excludeSources: ['platform'] })
+      const result = await agent.get()
+
+      expect(Object.keys(result.components)).not.toContain('platform')
+      expect(typeof result.confidence.score).toBe('number')
+      expect(result.confidence.score).toBeGreaterThan(0)
+      expect(result.confidence.score).toBeLessThanOrEqual(1)
+      expect(result.confidence.comment).toMatch(/^\d\.\d+ if upgrade to Pro: /)
+      expect(typeof result.visitorId).toBe('string')
+      expect(result.visitorId).not.toEqual('')
+    })
   })
 
   it('loads entropy sources when created', async () => {

@@ -116,15 +116,26 @@ export const sources = {
  */
 export type BuiltinComponents = SourcesToComponents<typeof sources>
 
-export interface BuiltinSourceOptions {
+/**
+ * Names of the built-in entropy sources
+ */
+export type BuiltinSourceName = keyof BuiltinComponents
+
+export interface BuiltinSourceOptions<TExclude extends BuiltinSourceName = never> {
   debug?: boolean
   cache: Record<string, unknown>
+  /**
+   * Names of the sources to skip collecting
+   */
+  excludeSources?: readonly TExclude[]
 }
 
 /**
  * Loads the built-in entropy sources.
  * Returns a function that collects the entropy components to make the visitor identifier.
  */
-export default function loadBuiltinSources(options: BuiltinSourceOptions): () => Promise<BuiltinComponents> {
-  return loadSources(sources, options, [])
+export default function loadBuiltinSources<TExclude extends BuiltinSourceName = never>(
+  options: BuiltinSourceOptions<TExclude>,
+): () => Promise<Omit<BuiltinComponents, TExclude>> {
+  return loadSources(sources, options, options.excludeSources || [])
 }

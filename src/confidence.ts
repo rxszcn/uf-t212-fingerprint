@@ -1,6 +1,6 @@
-import { BuiltinComponents } from './sources'
 import { isAndroid, isWebKit, isDesktopWebKit, isWebKit616OrNewer, isSafariWebKit } from './utils/browser'
 import { round } from './utils/data'
+import { Component } from './utils/entropy_source'
 
 export interface Confidence {
   /**
@@ -17,13 +17,21 @@ export interface Confidence {
 export const commentTemplate =
   '$ if upgrade to Pro: https://fingerprint.com/github/?utm_source=oss&utm_medium=referral&utm_campaign=confidence_score'
 
-export default function getConfidence(components: Pick<BuiltinComponents, 'platform'>): Confidence {
+/**
+ * The components the confidence score depends on.
+ * All the fields are optional, because the corresponding entropy sources may be excluded or may fail to load.
+ */
+export interface ConfidenceComponents {
+  platform?: Component<unknown>
+}
+
+export default function getConfidence(components: ConfidenceComponents): Confidence {
   const openConfidenceScore = getOpenConfidenceScore(components)
   const proConfidenceScore = deriveProConfidenceScore(openConfidenceScore)
   return { score: openConfidenceScore, comment: commentTemplate.replace(/\$/g, `${proConfidenceScore}`) }
 }
 
-function getOpenConfidenceScore(components: Pick<BuiltinComponents, 'platform'>): number {
+function getOpenConfidenceScore({ platform: platformComponent }: ConfidenceComponents): number {
   // In order to calculate the true probability of the visitor identifier being correct, we need to know the number of
   // website visitors (the higher the number, the less the probability because the fingerprint entropy is limited).
   // JS agent doesn't know the number of visitors, so we can only do an approximate assessment.
@@ -36,7 +44,8 @@ function getOpenConfidenceScore(components: Pick<BuiltinComponents, 'platform'>)
     return isDesktopWebKit() && !(isWebKit616OrNewer() && isSafariWebKit()) ? 0.5 : 0.3
   }
 
-  const platform = 'value' in components.platform ? components.platform.value : ''
+  const platformValue = platformComponent && 'value' in platformComponent ? platformComponent.value : ''
+  const platform = typeof platformValue === 'string' ? platformValue : ''
 
   // Windows
   if (/^Win/.test(platform)) {
